@@ -3,290 +3,219 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paper Types Drawing</title>
-    <style>
-        /* Style for the body to center everything and set a background color */
-        body {
-            display: flex; /* Makes the body a flex container */
-            flex-direction: column; /* Aligns children vertically */
-            justify-content: center; /* Centers content vertically */
-            align-items: center; /* Centers content horizontally */
-            height: 100vh; /* Full viewport height */
-            margin: 0; /* Removes default body margin */
-            background-color: #f0f0f0; /* Light gray background */
-        }
-        /* Style for the drawing canvas */
-        #drawingArea {
-            border: 1px solid black; /* Adds a black border */
-            cursor: crosshair; /* Changes the cursor to a crosshair */
-            margin-top: 20px; /* Adds space between buttons and canvas */
-        }
-        /* Style for the button container */
-        .buttons {
-            margin-bottom: 20px; /* Adds space below the buttons */
-        }
-    </style>
+    <title>Modern Paint App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <!-- Container for buttons and controls -->
-    <div class="buttons">
-        <!-- Buttons to change the paper type -->
-        <button onclick="changePaper('graph')">Graph Paper</button>
-        <button onclick="changePaper('lined')">Lined Paper</button>
-        <button onclick="changePaper('plain')">Plain Paper</button>
-        <button onclick="changePaper('cubed')">Cubed Paper</button>
-        <!-- Undo button to revert the last drawing action -->
-        <button onclick="undoLast()">Undo</button>
-        <!-- Buttons to set the drawing mode -->
-        <button onclick="setMode('draw')">Draw</button>
-        <button onclick="setMode('erase')">Rubber</button>
-        <button onclick="setMode('fill')">Fill</button>
-        <!-- Input to select a fill color -->
-        <label for="fillColor">Fill Color:</label>
-        <input type="color" id="fillColor" value="#000000" onchange="updateFillColor()">
-    </div>
-    <!-- The drawing area (canvas) -->
-    <canvas id="drawingArea" width="600" height="600"></canvas>
-    
+<body class="h-screen flex bg-gray-100 text-gray-800">
+
+    <!-- Sidebar Menu: Contains buttons for Paper Options, Tools, Color Picker, and Undo -->
+    <aside class="w-64 bg-white shadow-lg p-6 flex flex-col gap-6">
+        <h1 class="text-2xl font-semibold text-center mb-2">Paint App</h1>
+        
+        <!-- Paper Section: Allows the user to select different types of paper -->
+        <div>
+            <h2 class="text-lg font-semibold text-gray-600 mb-2">Paper Options</h2>
+            <div class="flex flex-col gap-2">
+                <!-- Each button calls a JavaScript function to change the background style of the canvas -->
+                <button onclick="changePaper('graph')" class="bg-blue-500 text-white py-2 rounded hover:bg-blue-600">Graph Paper</button>
+                <button onclick="changePaper('lined')" class="bg-blue-500 text-white py-2 rounded hover:bg-blue-600">Lined Paper</button>
+                <button onclick="changePaper('plain')" class="bg-blue-500 text-white py-2 rounded hover:bg-blue-600">Plain Paper</button>
+                <button onclick="changePaper('cubed')" class="bg-blue-500 text-white py-2 rounded hover:bg-blue-600">Cubed Paper</button>
+            </div>
+        </div>
+
+        <!-- Tool Section: Allows the user to choose between Draw, Erase, and Fill tools -->
+        <div>
+            <h2 class="text-lg font-semibold text-gray-600 mb-2">Tools</h2>
+            <div class="flex flex-col gap-2">
+                <!-- Buttons for each tool. When clicked, they set the mode to the corresponding tool -->
+                <button onclick="setMode('draw')" class="bg-green-500 text-white py-2 rounded hover:bg-green-600">Draw</button>
+                <button onclick="setMode('erase')" class="bg-yellow-500 text-white py-2 rounded hover:bg-yellow-600">Erase</button>
+                <button onclick="setMode('fill')" class="bg-pink-500 text-white py-2 rounded hover:bg-pink-600">Fill</button>
+            </div>
+        </div>
+
+        <!-- Color Section: Allows the user to pick a fill color for the 'Fill' tool -->
+        <div>
+            <h2 class="text-lg font-semibold text-gray-600 mb-2">Fill Color</h2>
+            <label for="fillColor" class="block text-sm font-medium mb-1">Pick a Color:</label>
+            <input type="color" id="fillColor" class="w-full h-10" value="#000000" onchange="updateFillColor()">
+        </div>
+
+        <!-- Undo Section: Provides an Undo button to remove the last drawing action -->
+        <button onclick="undoLast()" class="mt-4 p-2 bg-gray-800 text-white rounded hover:bg-red-600 transition">Undo</button>
+    </aside>
+
+    <!-- Main Content: Centered Canvas where the user draws, erases, or fills -->
+    <main class="flex-1 flex items-center justify-center p-6">
+        <canvas id="drawingArea" class="border border-gray-300 shadow-lg" width="900" height="900"></canvas>
+    </main>
+
     <script>
-        // Gets the canvas element and its 2D drawing context
+        // Get the canvas element and its 2D context for drawing
         const canvas = document.getElementById('drawingArea');
         const ctx = canvas.getContext('2d');
 
-        // Variables to track drawing state and history
-        let drawing = false; // Tracks if the user is currently drawing
-        let paths = []; // Stores all previous drawing paths for undo functionality
-        let currentPath = []; // Tracks the current drawing path
-        let mode = 'draw'; // Sets the current mode (draw, erase, or fill)
-        let fillColor = [0, 0, 0, 255]; // Default fill color (black)
+        // Initialize necessary variables for drawing, paths, and the current mode
+        let drawing = false;
+        let paths = []; // This will store all the paths drawn on the canvas
+        let currentPath = []; // Stores the current path being drawn
+        let mode = 'draw'; // Default mode is 'draw'
+        let fillColor = [0, 0, 0, 255]; // Default color is black for filling
 
-        // Event listener for mouse down on the canvas
+        // Event listener for mouse down to start drawing, erasing, or filling
         canvas.addEventListener('mousedown', (e) => {
-            // If the mode is 'fill', call the fillCanvas function
             if (mode === 'fill') {
-                const x = e.clientX - canvas.offsetLeft; // Calculate the x-coordinate
-                const y = e.clientY - canvas.offsetTop; // Calculate the y-coordinate
-                fillCanvas(x, y); // Start filling at the clicked position
-                return; // Exit the function to avoid drawing logic
+                const x = e.clientX - canvas.offsetLeft;
+                const y = e.clientY - canvas.offsetTop;
+                fillCanvas(x, y); // If mode is 'fill', start the fill process
+                return;
             }
-            // Start drawing mode
-            drawing = true;
-            currentPath = []; // Reset the current path
-            draw(e); // Start drawing immediately
+            drawing = true; // Begin drawing or erasing
+            currentPath = []; // Reset current path
+            draw(e); // Draw the first point
         });
 
-        // Event listener for mouse movement on the canvas
+        // Event listener for mouse movement to continue drawing/erasing
         canvas.addEventListener('mousemove', draw);
 
-        // Event listener for mouse release (stops drawing)
-        canvas.addEventListener('mouseup', () => {
-            drawing = false; // Stop drawing
-            if (mode === 'draw') paths.push([...currentPath]); // Save the current path to history
-            ctx.beginPath(); // Reset the path context
+        // Event listener for mouse up to stop drawing/erasing
+        canvas.addEventListener('mouseup', () => { 
+            drawing = false; 
+            if (mode === 'draw') paths.push([...currentPath]); // Save path if in drawing mode
+            ctx.beginPath(); // Begin a new path
         });
 
-        // Event listener for mouse leaving the canvas (stop drawing)
-        canvas.addEventListener('mouseout', () => {
-            drawing = false;
-        });
+        // Event listener for mouse out to stop drawing if the cursor leaves the canvas
+        canvas.addEventListener('mouseout', () => { drawing = false; });
 
-        /**
-         * Function to draw on the canvas based on mouse movement
-         */
+        // Function to draw on the canvas or erase based on the current mode
         function draw(e) {
-            if (!drawing) return; // Exit if not in drawing mode
+            if (!drawing) return; // If not drawing, do nothing
 
-            // Calculate the x and y coordinates of the mouse
-            const x = e.clientX - canvas.offsetLeft;
-            const y = e.clientY - canvas.offsetTop;
+            const x = e.clientX - canvas.offsetLeft; // Get the X position of the mouse relative to the canvas
+            const y = e.clientY - canvas.offsetTop; // Get the Y position of the mouse relative to the canvas
 
-            ctx.lineWidth = 2; // Sets the thickness of the line
-            ctx.lineCap = 'round'; // Makes the line ends rounded
+            ctx.lineWidth = 3; // Set the line width
+            ctx.lineCap = 'round'; // Set the line cap style
 
-            // If in 'draw' mode, draw on the canvas
+            // If the mode is 'draw', draw a black line
             if (mode === 'draw') {
-                ctx.strokeStyle = 'black'; // Sets the line color to black
-                ctx.lineTo(x, y); // Draws a line to the current mouse position
-                ctx.stroke(); // Renders the line on the canvas
-                ctx.beginPath(); // Starts a new path
-                ctx.moveTo(x, y); // Moves to the current mouse position
-                currentPath.push({ x, y }); // Adds the point to the current path
-            } else if (mode === 'erase') {
-                // If in 'erase' mode, clear a small square area around the cursor
-                ctx.clearRect(x - 5, y - 5, 10, 10);
+                ctx.strokeStyle = 'black'; // Set the stroke color
+                ctx.lineTo(x, y); // Draw a line to the current mouse position
+                ctx.stroke(); // Apply the stroke
+                ctx.beginPath(); // Start a new path at the current position
+                ctx.moveTo(x, y); // Move to the current mouse position
+                currentPath.push({ x, y }); // Add the point to the current path
+            } 
+            // If the mode is 'erase', clear a small area at the mouse position
+            else if (mode === 'erase') {
+                ctx.clearRect(x - 5, y - 5, 10, 10); // Erase a 10x10 area
             }
         }
 
-        /**
-         * Function to change the paper type (background of the canvas)
-         */
+        // Function to change the background of the canvas based on paper type selected
         function changePaper(type) {
             switch(type) {
                 case 'graph':
-                    // Sets a graph paper background with grid lines every 30px
-                    canvas.style.background = 'linear-gradient(90deg, transparent 29px, #aaa 30px), linear-gradient(transparent 29px, #aaa 30px)';
-                    canvas.style.backgroundSize = '30px 30px';
+                    canvas.style.background = 'linear-gradient(90deg, transparent 29px, #ddd 30px), linear-gradient(transparent 29px, #ddd 30px)';
+                    canvas.style.backgroundSize = '30px 30px'; // Set background for graph paper
                     break;
                 case 'lined':
-                    // Sets a lined paper background with horizontal lines every 30px
-                    canvas.style.background = 'linear-gradient(transparent 29px, #aaa 30px)';
-                    canvas.style.backgroundSize = 'auto 30px';
+                    canvas.style.background = 'linear-gradient(transparent 29px, #ddd 30px)';
+                    canvas.style.backgroundSize = 'auto 30px'; // Set background for lined paper
                     break;
                 case 'plain':
-                    // Removes the background for plain paper
-                    canvas.style.background = 'none';
+                    canvas.style.background = 'none'; // Remove any background for plain paper
                     break;
                 case 'cubed':
-                    // Sets a cubed paper background with grid lines
-                    canvas.style.background = 'linear-gradient(90deg, transparent 29px, #aaa 30px), linear-gradient(transparent 29px, #aaa 30px), linear-gradient(#aaa 1px, transparent 1px) 30px 30px';
-                    canvas.style.backgroundSize = '30px 30px';
+                    canvas.style.background = 'linear-gradient(90deg, transparent 29px, #ddd 30px), linear-gradient(transparent 29px, #ddd 30px), linear-gradient(#ddd 1px, transparent 1px)';
+                    canvas.style.backgroundSize = '30px 30px'; // Set background for cubed paper
                     break;
                 default:
-                    // Default to plain background
-                    canvas.style.background = 'none';
+                    canvas.style.background = 'none'; // Default to no background
             }
         }
 
-        /**
-         * Function to set the current mode (draw, erase, or fill)
-         */
-        function setMode(newMode) {
-            mode = newMode;
+        // Function to set the current tool mode (draw, erase, or fill)
+        function setMode(newMode) { 
+            mode = newMode; // Change the tool mode
         }
 
-        /**
-         * Function to undo the last drawing action
-         */
+        // Function to undo the last drawn path
         function undoLast() {
-            if (paths.length === 0) return; // Exit if there are no paths to undo
+            if (paths.length === 0) return; // If no paths, do nothing
             paths.pop(); // Remove the last path
             ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
-            redraw(); // Redraw all remaining paths
+            redraw(); // Redraw all the remaining paths
         }
 
-        /**
-         * Function to redraw all paths from history
-         */
+        // Function to redraw all the saved paths on the canvas
         function redraw() {
             paths.forEach(path => {
                 ctx.beginPath(); // Start a new path
-                path.forEach(point => {
-                    ctx.lineTo(point.x, point.y); // Draw the points in the path
-                });
-                ctx.stroke(); // Render the path
+                path.forEach(point => ctx.lineTo(point.x, point.y)); // Draw the saved path
+                ctx.stroke(); // Apply the stroke to the path
             });
         }
 
-        /**
-         * Function to fill an area with the selected color
-         */
-        function fillCanvas(startX, startY) {
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height); // Get the canvas pixel data
-            const pixels = imageData.data; // Access the pixel array
-            const targetColor = getPixelColor(pixels, startX, startY); // Get the color of the clicked pixel
-
-            if (colorsMatch(targetColor, fillColor)) return; // Exit if already filled with the target color
-
-            const pixelStack = [[startX, startY]]; // Stack to track pixels to fill
-
-            while (pixelStack.length > 0) { 
-                // Continue as long as there are pixels in the stack to process
-
-                const [x, y] = pixelStack.pop();
-                // Retrieve the next pixel's coordinates (x, y) from the stack
-                // pixelStack.pop() removes and returns the last pixel added (LIFO behavior)
-
-                const idx = (y * canvas.width + x) * 4;
-                // Calculate the index in the pixel array where the color data starts
-                // Each pixel has 4 values (R, G, B, A), so multiply position by 4
-
-                if (!colorsMatch(getPixelColor(pixels, x, y), targetColor)) continue;
-                // Check if the current pixel color matches the target color
-                // If it doesn't match, skip further processing for this pixel
-
-                setPixelColor(pixels, idx, fillColor);
-                // Set the current pixel's color to the fill color
-
-                // Check and push neighboring pixels (left, right, up, down) to the stack
-                // Only push if the pixel is within canvas bounds
-                if (x > 0) pixelStack.push([x - 1, y]); // Left pixel
-                if (x < canvas.width - 1) pixelStack.push([x + 1, y]); // Right pixel
-                if (y > 0) pixelStack.push([x, y - 1]); // Top pixel
-                if (y < canvas.height - 1) pixelStack.push([x, y + 1]); // Bottom pixel
-            }
-
-            ctx.putImageData(imageData, 0, 0);
-            // After all pixels have been processed, update the canvas with the new image data
-        }
-
-        /**
-         * Function to get the color of a specific pixel
-         * @param {Uint8ClampedArray} pixels - The array containing pixel data
-         * @param {number} x - The x-coordinate of the pixel
-         * @param {number} y - The y-coordinate of the pixel
-         * @returns {Array} - An array containing the RGBA values of the pixel
-         */
-        function getPixelColor(pixels, x, y) {
-            const idx = (y * canvas.width + x) * 4;
-            // Calculate the starting index of the pixel's RGBA values
-            return [pixels[idx], pixels[idx + 1], pixels[idx + 2], pixels[idx + 3]];
-            // Return the RGBA values as an array
-        }
-
-        /**
-         * Function to set a pixel's color in the pixel array
-         * @param {Uint8ClampedArray} pixels - The array containing pixel data
-         * @param {number} idx - The starting index of the pixel's RGBA values
-         * @param {Array} color - An array containing the new RGBA color values
-         */
-        function setPixelColor(pixels, idx, color) {
-            pixels[idx] = color[0];     // Set red channel
-            pixels[idx + 1] = color[1]; // Set green channel
-            pixels[idx + 2] = color[2]; // Set blue channel
-            pixels[idx + 3] = color[3]; // Set alpha channel (opacity)
-        }
-
-        /**
-         * Function to compare two colors for equality
-         * @param {Array} color1 - The first RGBA color array
-         * @param {Array} color2 - The second RGBA color array
-         * @returns {boolean} - True if the colors match, otherwise false
-         */
-        function colorsMatch(color1, color2) {
-            return color1[0] === color2[0] && // Compare red channel
-                   color1[1] === color2[1] && // Compare green channel
-                   color1[2] === color2[2] && // Compare blue channel
-                   color1[3] === color2[3];   // Compare alpha channel
-        }
-
-        /**
-         * Function to update the fill color based on the color input element
-         */
+        // Function to update the fill color based on the color picker
         function updateFillColor() {
-            const color = document.getElementById('fillColor').value;
-            // Get the current value (hex code) from the color input field
-
-            const rgb = hexToRgb(color);
-            // Convert the hex color to an RGB object
-
-            fillColor = [rgb.r, rgb.g, rgb.b, 255];
-            // Update the global fillColor variable with the RGB values and full opacity
+            const color = document.getElementById('fillColor').value; // Get the color from the input
+            const rgb = hexToRgb(color); // Convert hex to RGB
+            fillColor = [rgb.r, rgb.g, rgb.b, 255]; // Store the color with full opacity
         }
 
-        /**
-         * Function to convert a hexadecimal color string to an RGB object
-         * @param {string} hex - The hexadecimal color string (e.g., '#ff0000')
-         * @returns {Object} - An object with properties r, g, and b for red, green, and blue
-         */
-        function hexToRgb(hex) {
-            const bigint = parseInt(hex.slice(1), 16);
-            // Convert the hex string (ignoring the #) to a base-10 integer
+        // Function to perform a fill action on the canvas
+        function fillCanvas(startX, startY) {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height); // Get the current pixel data
+            const pixels = imageData.data; // Extract pixel data
+            const targetColor = getPixelColor(pixels, startX, startY); // Get the color at the starting point
 
-            return {
-                r: (bigint >> 16) & 255, // Extract red channel (shift 16 bits)
-                g: (bigint >> 8) & 255,  // Extract green channel (shift 8 bits)
-                b: bigint & 255          // Extract blue channel
-            };
+            // If the target color is the same as the fill color, do nothing
+            if (colorsMatch(targetColor, fillColor)) return;
+
+            const pixelStack = [[startX, startY]]; // Stack to store pixels that need to be filled
+            while (pixelStack.length > 0) {
+                const [x, y] = pixelStack.pop(); // Pop a pixel to fill
+                const idx = (y * canvas.width + x) * 4; // Get the pixel index
+
+                // Skip if the current pixel doesn't match the target color
+                if (!colorsMatch(getPixelColor(pixels, x, y), targetColor)) continue;
+                setPixelColor(pixels, idx, fillColor); // Set the pixel color to the fill color
+
+                // Add neighboring pixels to the stack for filling
+                if (x > 0) pixelStack.push([x - 1, y]);
+                if (x < canvas.width - 1) pixelStack.push([x + 1, y]);
+                if (y > 0) pixelStack.push([x, y - 1]);
+                if (y < canvas.height - 1) pixelStack.push([x, y + 1]);
+            }
+            ctx.putImageData(imageData, 0, 0); // Apply the filled pixels back to the canvas
+        }
+
+        // Helper function to get the color of a pixel at (x, y)
+        function getPixelColor(pixels, x, y) {
+            const idx = (y * canvas.width + x) * 4; // Calculate the index of the pixel
+            return [pixels[idx], pixels[idx + 1], pixels[idx + 2], pixels[idx + 3]]; // Return the RGBA values
+        }
+
+        // Helper function to set the color of a pixel
+        function setPixelColor(pixels, idx, color) {
+            pixels[idx] = color[0]; // Set the red value
+            pixels[idx + 1] = color[1]; // Set the green value
+            pixels[idx + 2] = color[2]; // Set the blue value
+            pixels[idx + 3] = color[3]; // Set the alpha (opacity) value
+        }
+
+        // Helper function to check if two colors match (by comparing RGBA values)
+        function colorsMatch(color1, color2) {
+            return color1.every((v, i) => v === color2[i]); // Compare each color channel
+        }
+
+        // Helper function to convert a hex color code to RGB
+        function hexToRgb(hex) {
+            const bigint = parseInt(hex.slice(1), 16); // Convert hex string to a number
+            return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 }; // Extract RGB components
         }
     </script>
 </body>
