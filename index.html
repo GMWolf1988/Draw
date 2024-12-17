@@ -16,7 +16,6 @@
         <div>
             <h2 class="text-lg font-semibold text-gray-600 mb-2">Paper Options</h2>
             <div class="flex flex-col gap-2">
-                <!-- Each button calls a JavaScript function to change the background style of the canvas -->
                 <button onclick="changePaper('graph')" class="bg-blue-500 text-white py-2 rounded hover:bg-blue-600">Graph Paper</button>
                 <button onclick="changePaper('lined')" class="bg-blue-500 text-white py-2 rounded hover:bg-blue-600">Lined Paper</button>
                 <button onclick="changePaper('plain')" class="bg-blue-500 text-white py-2 rounded hover:bg-blue-600">Plain Paper</button>
@@ -28,7 +27,6 @@
         <div>
             <h2 class="text-lg font-semibold text-gray-600 mb-2">Tools</h2>
             <div class="flex flex-col gap-2">
-                <!-- Buttons for each tool. When clicked, they set the mode to the corresponding tool -->
                 <button onclick="setMode('draw')" class="bg-green-500 text-white py-2 rounded hover:bg-green-600">Draw</button>
                 <button onclick="setMode('erase')" class="bg-yellow-500 text-white py-2 rounded hover:bg-yellow-600">Erase</button>
                 <button onclick="setMode('fill')" class="bg-pink-500 text-white py-2 rounded hover:bg-pink-600">Fill</button>
@@ -51,110 +49,145 @@
         <canvas id="drawingArea" class="border border-gray-300 shadow-lg" width="900" height="900"></canvas>
     </main>
 
+    <!-- New Draw Options Dashboard (Hidden by default) -->
+    <div id="drawOptions" class="hidden w-1/4 bg-white shadow-lg p-4 absolute top-0 right-0 flex flex-col gap-6">
+        <h2 class="text-lg font-semibold text-center mb-4">Draw Tool Settings</h2>
+        
+        <!-- Radial buttons for line thickness -->
+        <div class="flex justify-center gap-4">
+            <button onclick="updateThickness(1)" class="w-12 h-12 bg-gray-200 rounded-full hover:bg-gray-300">1px</button>
+            <button onclick="updateThickness(3)" class="w-12 h-12 bg-gray-200 rounded-full hover:bg-gray-300">3px</button>
+            <button onclick="updateThickness(5)" class="w-12 h-12 bg-gray-200 rounded-full hover:bg-gray-300">5px</button>
+            <button onclick="updateThickness(7)" class="w-12 h-12 bg-gray-200 rounded-full hover:bg-gray-300">7px</button>
+            <button onclick="updateThickness(10)" class="w-12 h-12 bg-gray-200 rounded-full hover:bg-gray-300">10px</button>
+        </div>
+    </div>
+
     <script>
-        // Get the canvas element and its 2D context for drawing
+        // Access the canvas element and its drawing context
         const canvas = document.getElementById('drawingArea');
         const ctx = canvas.getContext('2d');
 
-        // Initialize necessary variables for drawing, paths, and the current mode
-        let drawing = false;
-        let paths = []; // This will store all the paths drawn on the canvas
-        let currentPath = []; // Stores the current path being drawn
-        let mode = 'draw'; // Default mode is 'draw'
-        let fillColor = [0, 0, 0, 255]; // Default color is black for filling
+        // Initialize variables to keep track of drawing state
+        let drawing = false;            // Boolean to track if drawing is in progress
+        let paths = [];                 // Array to store paths (drawn lines)
+        let currentPath = [];           // Array to store the current path (points)
+        let mode = 'draw';              // Default tool mode (draw mode)
+        let fillColor = [0, 0, 0, 255]; // Default fill color (black)
+        let lineThickness = 3;          // Default line thickness for drawing
 
-        // Event listener for mouse down to start drawing, erasing, or filling
+        // Access the 'Draw Options' dashboard element
+        const drawOptions = document.getElementById('drawOptions');
+
+        // Event listener for mouse down, used for starting a drawing action or fill action
         canvas.addEventListener('mousedown', (e) => {
             if (mode === 'fill') {
+                // If the mode is 'fill', fill the canvas at the clicked position
                 const x = e.clientX - canvas.offsetLeft;
                 const y = e.clientY - canvas.offsetTop;
-                fillCanvas(x, y); // If mode is 'fill', start the fill process
+                fillCanvas(x, y);
                 return;
             }
-            drawing = true; // Begin drawing or erasing
-            currentPath = []; // Reset current path
-            draw(e); // Draw the first point
+            // Otherwise, start drawing
+            drawing = true;
+            currentPath = []; // Reset the current path
+            draw(e);           // Begin drawing immediately
         });
 
-        // Event listener for mouse movement to continue drawing/erasing
+        // Event listener for mouse move, used to draw lines or erase as the mouse moves
         canvas.addEventListener('mousemove', draw);
 
-        // Event listener for mouse up to stop drawing/erasing
-        canvas.addEventListener('mouseup', () => { 
-            drawing = false; 
-            if (mode === 'draw') paths.push([...currentPath]); // Save path if in drawing mode
-            ctx.beginPath(); // Begin a new path
+        // Event listener for mouse up, used to stop drawing or erasing
+        canvas.addEventListener('mouseup', () => {
+            drawing = false;  // Stop drawing
+            if (mode === 'draw') paths.push([...currentPath]); // Save the current path if in draw mode
+            ctx.beginPath();   // Begin a new path for the next action
         });
 
-        // Event listener for mouse out to stop drawing if the cursor leaves the canvas
+        // Event listener for mouse out, used to stop drawing if the mouse leaves the canvas
         canvas.addEventListener('mouseout', () => { drawing = false; });
 
-        // Function to draw on the canvas or erase based on the current mode
+        // Function to handle the actual drawing or erasing based on mouse movement
         function draw(e) {
-            if (!drawing) return; // If not drawing, do nothing
+            if (!drawing) return; // If not drawing, exit the function
 
-            const x = e.clientX - canvas.offsetLeft; // Get the X position of the mouse relative to the canvas
-            const y = e.clientY - canvas.offsetTop; // Get the Y position of the mouse relative to the canvas
+            // Get the mouse position relative to the canvas
+            const x = e.clientX - canvas.offsetLeft;
+            const y = e.clientY - canvas.offsetTop;
 
-            ctx.lineWidth = 3; // Set the line width
-            ctx.lineCap = 'round'; // Set the line cap style
+            // Set the line thickness for the stroke
+            ctx.lineWidth = lineThickness;
+            ctx.lineCap = 'round'; // Round the ends of the lines
 
-            // If the mode is 'draw', draw a black line
+            // If in draw mode, draw a line from the last position to the current mouse position
             if (mode === 'draw') {
-                ctx.strokeStyle = 'black'; // Set the stroke color
-                ctx.lineTo(x, y); // Draw a line to the current mouse position
-                ctx.stroke(); // Apply the stroke
-                ctx.beginPath(); // Start a new path at the current position
-                ctx.moveTo(x, y); // Move to the current mouse position
-                currentPath.push({ x, y }); // Add the point to the current path
-            } 
-            // If the mode is 'erase', clear a small area at the mouse position
-            else if (mode === 'erase') {
-                ctx.clearRect(x - 5, y - 5, 10, 10); // Erase a 10x10 area
+                ctx.strokeStyle = 'black'; // Default line color (black)
+                ctx.lineTo(x, y);          // Draw a line to the new position
+                ctx.stroke();              // Apply the stroke
+                ctx.beginPath();           // Begin a new path for the next segment
+                ctx.moveTo(x, y);          // Move to the current position
+                currentPath.push({ x, y }); // Add the current point to the path array
+            } else if (mode === 'erase') {
+                // If in erase mode, clear a small area around the mouse
+                ctx.clearRect(x - 5, y - 5, 10, 10); // Clear a 10x10 pixel square
             }
         }
 
-        // Function to change the background of the canvas based on paper type selected
+        // Function to set the drawing mode (draw, erase, fill)
+        function setMode(newMode) {
+            mode = newMode; // Set the current mode to the selected mode
+            if (mode === 'draw') {
+                drawOptions.classList.remove('hidden'); // Show the drawing options if in draw mode
+            } else {
+                drawOptions.classList.add('hidden'); // Hide the drawing options in other modes
+            }
+        }
+
+        // Function to update the line thickness based on the user's selection
+        function updateThickness(thickness) {
+            lineThickness = thickness; // Set the line thickness to the selected value
+            const buttons = document.querySelectorAll('#drawOptions button'); // Get all the thickness buttons
+            buttons.forEach(btn => btn.classList.remove('bg-gray-300', 'hover:bg-gray-400')); // Remove previous highlights
+            // Highlight the selected button
+            event.target.classList.add('bg-gray-300', 'hover:bg-gray-400');
+        }
+
+        // Function to change the paper style (background grid) of the canvas
         function changePaper(type) {
             switch(type) {
                 case 'graph':
                     canvas.style.background = 'linear-gradient(90deg, transparent 29px, #ddd 30px), linear-gradient(transparent 29px, #ddd 30px)';
-                    canvas.style.backgroundSize = '30px 30px'; // Set background for graph paper
+                    canvas.style.backgroundSize = '30px 30px';
                     break;
                 case 'lined':
                     canvas.style.background = 'linear-gradient(transparent 29px, #ddd 30px)';
-                    canvas.style.backgroundSize = 'auto 30px'; // Set background for lined paper
+                    canvas.style.backgroundSize = 'auto 30px';
                     break;
                 case 'plain':
-                    canvas.style.background = 'none'; // Remove any background for plain paper
+                    canvas.style.background = 'none';
                     break;
                 case 'cubed':
                     canvas.style.background = 'linear-gradient(90deg, transparent 29px, #ddd 30px), linear-gradient(transparent 29px, #ddd 30px), linear-gradient(#ddd 1px, transparent 1px)';
-                    canvas.style.backgroundSize = '30px 30px'; // Set background for cubed paper
+                    canvas.style.backgroundSize = '30px 30px';
                     break;
                 default:
-                    canvas.style.background = 'none'; // Default to no background
+                    canvas.style.background = 'none';
             }
         }
 
-        // Function to set the current tool mode (draw, erase, or fill)
-        function setMode(newMode) { 
-            mode = newMode; // Change the tool mode
-        }
-
-        // Function to undo the last drawn path
+        // Function to undo the last drawing action
         function undoLast() {
-            if (paths.length === 0) return; // If no paths, do nothing
-            paths.pop(); // Remove the last path
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
-            redraw(); // Redraw all the remaining paths
+            if (paths.length === 0) return; // If no paths exist, do nothing
+            paths.pop(); // Remove the last drawn path
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the entire canvas
+            redraw(); // Redraw the remaining paths
         }
 
-        // Function to redraw all the saved paths on the canvas
+        // Function to redraw all previously drawn paths
         function redraw() {
             paths.forEach(path => {
-                ctx.beginPath(); // Start a new path
-                path.forEach(point => ctx.lineTo(point.x, point.y)); // Draw the saved path
+                ctx.beginPath(); // Start a new path for each drawn line
+                path.forEach(point => ctx.lineTo(point.x, point.y)); // Draw each point in the path
                 ctx.stroke(); // Apply the stroke to the path
             });
         }
