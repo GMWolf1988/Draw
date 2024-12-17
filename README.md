@@ -1,6 +1,3 @@
-
-Here’s a clean and professional README draft for your GitHub repository that communicates your project's current state, features, and intent clearly:
-
 🎨 Draw: A MS Paint-Like Application Using HTML Canvas and JavaScript
 This is an ongoing project that replicates features of MS Paint using HTML Canvas and JavaScript.
 
